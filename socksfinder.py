@@ -4,24 +4,6 @@ from bs4 import BeautifulSoup
 import requests
 import socket
 import struct
-# подключение к сайту с прокси
-url = "http://www.gatherproxy.com/ru/sockslist"
-reqheaders = {
-    'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) \ '
-                  'AppleWebKit/537.36 (KHTML, like Gecko) \ '
-                  'Chrome/62.0.3202.94 Safari/537.36',
-}
-session = requests.Session()
-resp = session.get(url, data={}, headers=reqheaders)
-# получение кода ответа
-if resp.status_code != 200:
-    print("Ошибка при чтении страницы. Код ответа HTTP - " + resp.status_code)
-# парсинг кода
-bsObj = BeautifulSoup(resp.text, "html.parser")
-# очистка всех тегов script
-# [el.extract() for el in bsObj('script')]
-parsecode = bsObj.findAll("td")
-
 
 # функция проверки прокси на работоспособность
 # Возвращает True, если прокси рабочая, при любых ошибках возвращает False
@@ -45,6 +27,7 @@ def checkproxy(ip, port):
             # ответ сервера
             # 1 байт - Номер версии SOCKS (должен быть 0x05 для этой версии)
             # 1 байт - Выбранный метод аутентификации или 0xFF, если нет приемлемого метода
+            s.close()
             if recv == b'\x05\x00':
                 return True
             return False
@@ -55,6 +38,24 @@ def checkproxy(ip, port):
         print("Таймаут подключения")
         return False
 
+
+# подключение к сайту с прокси
+url = "http://www.gatherproxy.com/ru/sockslist"
+reqheaders = {
+    'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) \ '
+                  'AppleWebKit/537.36 (KHTML, like Gecko) \ '
+                  'Chrome/62.0.3202.94 Safari/537.36',
+}
+session = requests.Session()
+resp = session.get(url, data={}, headers=reqheaders)
+# получение кода ответа
+if resp.status_code != 200:
+    print("Ошибка при чтении страницы. Код ответа HTTP - " + resp.status_code)
+# парсинг кода
+bsObj = BeautifulSoup(resp.text, "html.parser")
+# очистка всех тегов script
+# [el.extract() for el in bsObj('script')]
+parsecode = bsObj.findAll("td")
 
 iplist = []
 ports = []
