@@ -1,17 +1,18 @@
+
 #!/usr/bin/python
 # -*- coding:utf-8 -*-
-from bs4 import BeautifulSoup
 import requests
 import socket
 import struct
+import json,os
 
-# функция проверки прокси на работоспособность
-# Возвращает True, если прокси рабочая, при любых ошибках возвращает False
+# function check proxy performance
+# Returns True if the proxy is working, returns False for any errors.
 def checkproxy(ip, port):
     try:
         port = int(port)
     except ValueError as msg:
-        print('Некорректный порт')
+        print('Invalid port')
         return False
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -19,28 +20,30 @@ def checkproxy(ip, port):
             s.connect((ip, port))
             s.sendall(struct.pack(
                 '!BBB',
-                0x05,  # Номер версии SOCKS
-                0x01,  # Количество поддерживаемых методов аутентификации
-                0x00,  # Номера методов аутентификации, 1 байт для каждого метода
+                0x05,  # SOCKS version number
+                0x01,  # Number of authentication methods supported
+                0x00,  # Numbers of authentication methods, 1 byte for each method
                 ))
             recv = s.recv(1024)
-            # ответ сервера
-            # 1 байт - Номер версии SOCKS (должен быть 0x05 для этой версии)
-            # 1 байт - Выбранный метод аутентификации или 0xFF, если нет приемлемого метода
+             # server response
+             # 1 byte - SOCKS version number (must be 0x05 for this version)
+             # 1 byte - Selected authentication method or 0xFF if there is no acceptable method.
             s.close()
             if recv == b'\x05\x00':
                 return True
             return False
     except socket.gaierror as msg:
-        print("Некорректный адрес")
+        print("Invalid address")
         return False
     except socket.timeout as msg:
-        print("Таймаут подключения")
+        #print("Timeframe subclusions")
         return False
+    except Exception as e:
+        pass
 
 
-# подключение к сайту с прокси
-url = "http://www.gatherproxy.com/ru/sockslist"
+# connect to the proxy site
+url = "https://mtpro.xyz/api/?type=socks"
 reqheaders = {
     'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) \ '
                   'AppleWebKit/537.36 (KHTML, like Gecko) \ '
@@ -48,33 +51,20 @@ reqheaders = {
 }
 session = requests.Session()
 resp = session.get(url, data={}, headers=reqheaders)
-# получение кода ответа
+# getting an answer code
 if resp.status_code != 200:
-    print("Ошибка при чтении страницы. Код ответа HTTP - " + resp.status_code)
-# парсинг кода
-bsObj = BeautifulSoup(resp.text, "html.parser")
-# очистка всех тегов script
-# [el.extract() for el in bsObj('script')]
-parsecode = bsObj.findAll("td")
+    print("Error reading page. HTTP response code - " + resp.status_code)
+proxys =[]
 
-iplist = []
-ports = []
-# заполняем списки ip-адреов и портов
-i = 0
-for item in parsecode:
-    tempObj = BeautifulSoup(str(item), "html.parser")
-    data = tempObj.get_text(" ")
-    if "document.write" in data:
-        if i % 2 == 0:
-            iplist.append(data.split("'")[1])
-            i += 1
-        else:
-            ports.append(data.split("'")[1])
-            i += 1
-
-itemsToCheck = list(zip(iplist, ports))
-
-for i in itemsToCheck:
-    if checkproxy(i[0], i[1]):
-        print("Рабочий SOCKS5 прокси: {0}:{1}".format(i[0], i[1]))
-        break
+for n in range(49):
+    proxy=json.loads(resp.text)
+    proxys.append(proxy[n]['ip']+":"+proxy[n]['port'])
+os.remove("downloads/proxy.txt")
+for i in proxys:
+    testit=i.split(":")
+    if checkproxy(testit[0], testit[1]) == True:
+        print("Work SOCKS5 proxy: {0}:{1}".format(testit[0], testit[1]))
+        filesuccess=open("downloads/proxy.txt","a")
+        filesuccess.write(str(testit[0]+":"+testit[1])+"\n")
+        filesuccess.close()
+        
